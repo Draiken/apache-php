@@ -1,0 +1,46 @@
+---
+auto_deploy: true
+context: release-handsup-us-east-1
+domain: releaseapp.gethandsup.com
+repo_name: draiken/apache-php
+environment_templates:
+  - name: permanent
+  - name: ephemeral
+hostnames:
+  - web: ai-web-apache-php-${env_id}.${domain}
+resources:
+  cpu:
+    limits: 1000m
+    requests: 50m
+  memory:
+    limits: 1Gi
+    requests: 100Mi
+  replicas: 1
+services:
+  - name: web
+    image: draiken/apache-php/web
+    build:
+      context: app
+    has_repo: true
+    ports:
+      - type: node_port
+        target_port: "80"
+        port: "80"
+        loadbalancer: false
+workflows:
+  - name: setup
+    parallelize:
+      - step: services-0
+        tasks:
+          - services.web
+  - name: patch
+    parallelize:
+      - step: services-0
+        tasks:
+          - services.web
+  - name: teardown
+    parallelize:
+      - step: remove-environment
+        tasks:
+          - release.remove_environment
+tracking_branch: main
